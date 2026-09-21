@@ -16,18 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Wayback downloader
-        run: |
-          gem install wayback_machine_downloader --user-install --no-document
-          echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
-
       - name: Download the 2019 site
-        run: |
-          wayback_machine_downloader http://2019.aistconf.org \
-            --directory restored-site \
-            --from 20190101000000 \
-            --to 20191231235959 \
-            --concurrency 1
+        run: python3 mirror_wayback.py --url http://2019.aistconf.org/ --timestamp 20191225072825 --output restored-site --base 2019 --max-urls 500
 
       - name: Prepare static GitHub Pages copy
         run: |
@@ -35,7 +25,7 @@ jobs:
           cp -a restored-site/. .
           rm -rf restored-site
           touch .nojekyll
-          python3 rewrite_links.py 2019 2019.aistconf.org
+          rm mirror_wayback.py
           rm rewrite_links.py
 
       - name: Commit restored site
