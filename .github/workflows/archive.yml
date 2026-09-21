@@ -1,0 +1,46 @@
+name: Restore AIST 2019 from Web Archive
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: ${{ !contains(github.event.head_commit.message, '[archive complete]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Wayback downloader
+        run: gem install wayback_machine_downloader --no-document
+
+      - name: Download the 2019 site
+        run: |
+          wayback_machine_downloader http://2019.aistconf.org \
+            --directory restored-site \
+            --from 20190101000000 \
+            --to 20191231235959 \
+            --concurrency 1
+
+      - name: Prepare static GitHub Pages copy
+        run: |
+          find restored-site -type f | head
+          cp -a restored-site/. .
+          rm -rf restored-site
+          touch .nojekyll
+          python3 rewrite_links.py 2019 2019.aistconf.org
+          rm rewrite_links.py
+
+      - name: Commit restored site
+        run: |
+          git config user.name "AIST Archive Bot"
+          git config user.email "org@aistconf.org"
+          git add -A
+          git commit -m "Restore archived AIST 2019 website [archive complete]"
+          git push
+
